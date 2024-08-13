@@ -85,6 +85,13 @@
 
         :else [(apply str text) remaining]))))
 
+(defn scan-for-identifier [s]
+  (loop [remaining s
+         text []]
+    (let [f (first remaining)]
+      (if ((complement alphanumeric?) f) [(apply str text) remaining]
+        (recur (rest remaining) (conj text f))))))
+
 (defn scan-tokens [src]
   (loop [remaining src
          status nil
@@ -188,12 +195,10 @@
                    linenum))
 
           ;; Identifiers or keywords.
-          ;; This is the only case where there's double traversal of the input,
-          ;; restricted though it is to the length of identifiers and keywords.
           (alpha? f)
-          (let [literal-identifier-text
-                (apply str (take-while alphanumeric? remaining))]
-            (recur (drop-while alphanumeric? remaining)
+          (let [[literal-identifier-text remaining-after-identifier]
+                (scan-for-identifier remaining)]
+            (recur remaining-after-identifier
                    status
                    (conj tokens (->Token
                                   (or (keyword-lexemes literal-identifier-text)
